@@ -131,6 +131,16 @@ body {
   color: aqua;
 }
 
+.clickable-2 {
+  color: rgb(12, 12, 12);
+  cursor: pointer;
+  user-select: none;
+}
+
+.clickable-2:hover {
+  color: aqua;
+}
+
 
 /* Images Container */
 .images-container {
