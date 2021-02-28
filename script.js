@@ -10,9 +10,23 @@ const apiKey = 'DEMO_KEY';
 const apiUrl = `https://api.nasa.gov/planetary/apod?api_key=${apiKey}&count=${count}`;
 
 let resultsArray = [];
+let favorites = {}; // Beware this is an object why we use curlybrackets
 
-function updateDOM() {  //Istället för card hållaren i html
-    resultsArray.forEach((result) => {
+function showContent(page) {
+    window.scrollTo({top: 0, behavior: 'instant'}); //On load content on top of page instantly
+    if (page === 'results') {
+        resultsNav.classList.remove('hidden');
+        favoritesNav.classList.add('hidden');
+    } else {
+        resultsNav.classList.add('hidden');
+        favoritesNav.classList.remove('hidden');
+    }
+    loader.classList.add('hidden');
+}
+
+function createDOMNodes(page) {
+    const currentArray = page === 'results' ? resultsArray : Object.values(favorites);
+    currentArray.forEach((result) => {
         // Card Container
         const card = document.createElement('div');
         card.classList.add('card');  // Här skapar vi klassen "card"
@@ -34,10 +48,16 @@ function updateDOM() {  //Istället för card hållaren i html
         const cardTitle = document.createElement('h5');
         cardTitle.classList.add('card-title');
         cardTitle.textContent = result.title;
-        //Clickable-2 Save Text
+        //Save Text
         const saveText = document.createElement('p');
         saveText.classList.add('clickable-2');
-        saveText.textContent = 'Add To Favorites';
+        if (page === 'results') {
+            saveText.textContent = 'Add To Favorites';
+            saveText.setAttribute('onclick', `saveFavorite('${result.url}')`);   // This saving object to favorites
+        } else {
+            saveText.textContent = 'Remove Favorite';
+            saveText.setAttribute('onclick', `removeFavorite('${result.url}')`);   // This saving object to favorites
+        }
         // Card Text
         const cardText = document.createElement('p');
         cardText.textContent = result.explanation;
@@ -50,7 +70,7 @@ function updateDOM() {  //Istället för card hållaren i html
         // Copyright
         const copyrightResult = result.copyright === undefined ? '' : result.copyright; // Om namn ej finns, slipper vi undefined så här
         const copyright = document.createElement('span');
-        copyright.textContent = ` ${result.copyright}`;   // Gör detta för att skapa ett tomrum innan copyright
+        copyright.textContent = ` ${copyrightResult}`;   // Gör detta för att skapa ett tomrum innan copyright
         // Append (slåihop dessa i tur ordning parent & child förhållanden)
         footer.append(date, copyright);
         cardBody.append(cardTitle, saveText, cardText, footer),
@@ -60,16 +80,54 @@ function updateDOM() {  //Istället för card hållaren i html
     });   
 }
 
+function updateDOM(page) {  //Istället för card hållaren i html
+    // Get Favorites from localStorage
+    if (localStorage.getItem('nasaFavorites')) {
+        favorites = JSON.parse(localStorage.getItem('nasaFavorites'));
+    }
+    imagesContainer.textContent = '';  // For reseting after deleting items from localstorage
+    createDOMNodes(page);
+    showContent(page);
+}
+
 // Get 10 images from NASA API
 async function getNasaPictures() {
+    // Show Loader
+    loader.classList.remove('hidden');
     try {
         const response = await fetch(apiUrl);
         resultsArray = await response.json();
-        console.log(resultsArray);
-        updateDOM();
+        updateDOM('results');
     }   catch(error) {
         // Catch error here
     }     
+}
+
+// Add result to Favorites
+function saveFavorite(itemUrl) {
+    // Loop through Results Array to select Favorite
+    resultsArray.forEach((item) => {
+       if (item.url.includes(itemUrl) && !favorites[itemUrl]) { //Check if itemUrl already exists in favorites
+           favorites[itemUrl] = item;
+           // Show Save Confirmation for 2 seconds
+           saveConfirmed.hidden = false;
+           setTimeout(() => {
+            saveConfirmed.hidden = true;
+           }, 2000);
+           // Set Favorites in localStorage
+           localStorage.setItem('nasaFavorites', JSON.stringify(favorites));
+       }
+    });
+}
+
+// Remove item from Favorites
+function removeFavorite(itemUrl) {
+    if (favorites[itemUrl]) {
+        delete favorites[itemUrl];
+        // Set Favorites in localStorage
+        localStorage.setItem('nasaFavorites', JSON.stringify(favorites));
+        updateDOM('favorites');
+    }
 }
 
 // On Load
